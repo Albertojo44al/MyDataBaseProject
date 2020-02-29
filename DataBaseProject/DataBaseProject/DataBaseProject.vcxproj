@@ -145,7 +145,7 @@
     <ClInclude Include="..\..\..\DataBaseProject\backup\Tables.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\DataBaseProject\backup\bitMap.cpp" />
+    <ClCompile Include="..\..\..\DataBaseProject\backup\bit.cpp" />
     <ClCompile Include="..\..\..\DataBaseProject\backup\Blocks.cpp" />
     <ClCompile Include="..\..\..\DataBaseProject\backup\Main.cpp" />
     <ClCompile Include="..\..\..\DataBaseProject\backup\MetaData.cpp" />
