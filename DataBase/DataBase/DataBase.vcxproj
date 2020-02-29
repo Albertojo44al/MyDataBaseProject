@@ -20,8 +20,8 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
-    <ProjectGuid>{A37C885F-0A66-4455-A1A5-5EF3DF4C654C}</ProjectGuid>
-    <RootNamespace>DataBaseProject</RootNamespace>
+    <ProjectGuid>{8C425A13-D913-4F5D-BCEC-B6FA5E626D55}</ProjectGuid>
+    <RootNamespace>DataBase</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -138,18 +138,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\DataBaseProject\backup\bitMap.h" />
-    <ClInclude Include="..\..\..\DataBaseProject\backup\Blocks.h" />
-    <ClInclude Include="..\..\..\DataBaseProject\backup\MetaData.h" />
-    <ClInclude Include="..\..\..\DataBaseProject\backup\Struct.h" />
-    <ClInclude Include="..\..\..\DataBaseProject\backup\Tables.h" />
+    <ClInclude Include="bitMap.h" />
+    <ClInclude Include="Blocks.h" />
+    <ClInclude Include="MetaData.h" />
+    <ClInclude Include="struct.h" />
+    <ClInclude Include="Tables.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\DataBaseProject\backup\Blocks.cpp" />
-    <ClCompile Include="..\..\..\DataBaseProject\backup\Main.cpp" />
-    <ClCompile Include="..\..\..\DataBaseProject\backup\MetaData.cpp" />
-    <ClCompile Include="..\..\..\DataBaseProject\backup\Tables.cpp" />
     <ClCompile Include="bitMap.cpp" />
+    <ClCompile Include="Blocks.cpp" />
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MetaData.cpp" />
+    <ClCompile Include="Tables.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
