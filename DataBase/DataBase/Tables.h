@@ -17,6 +17,7 @@ public:
 	void dropTable(const char*);
 	int searchTable(const char*);
 	void writeColumns(string);
+	void splitColumns(string,const char*);
 
 };
 

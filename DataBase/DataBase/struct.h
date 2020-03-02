@@ -3,7 +3,6 @@
 #include <fstream>
 #include <iostream>
 #include <cmath>
-#define Size 300
 using namespace std;
 
 
@@ -22,6 +21,7 @@ struct columns {
 	char name[30];
 	char dataType[6];
 	int firstDataBlock;
+	bool primaryKey;
 };
 
 struct Tables {
@@ -42,17 +42,7 @@ struct BlocksData {
 	int actualPosition;
 };
 
-struct BlocksTable {
-	char block[1024];
-	int next;
-	int endBlock;
-};
 
-struct BlocksColumn {
-	char block[1024];
-	int next;
-
-};
 
 
 

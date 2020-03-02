@@ -15,9 +15,5 @@ public:
 	void save(string);
 	BlocksData readBlock(int);
 	void cleanBlock(int);
-
-	bool escribirEnDisco(const char*, int, BlocksData);
-	void nuevoArchivo(const char*, int);
-	void Borrar(const char*, int);
 };
 

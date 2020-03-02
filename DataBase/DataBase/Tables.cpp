@@ -34,31 +34,81 @@ int TableFunctions::addTable(const char* _name, string _columns) {
 }
 
 void TableFunctions::writeColumns(string _columns) {
-	int i = 0;
+	int i = 0,spaces =0;
 	while (i < 11) {
 		string column = "";
-
+		
 		for (int j = 0; j < _columns.size(); j++) {
-			if (_columns[j] == ' ') {
+			
+			if (_columns[j] == ' ' && spaces == 0) {
 				strcpy(t.columns[i].name, column.c_str());
+				t.columns[i].primaryKey = false;
 				column = "";
+				spaces++;
+			}
+			else if (_columns[j] == 'P' && spaces==1 && _columns[j+1] == ' '|| _columns[j] == ' ' && spaces == 1) {
+					t.columns[i].primaryKey = true;
 			}
 			else if (_columns[j] == ',' || _columns[j] == ';') {
 				strcpy(t.columns[i].dataType, column.c_str());
 				column = "";
 				t.columns[i].firstDataBlock = -1;
+				
 				i++;
+				spaces = 0;
 				if (_columns[j] == ';')
 					break;
 				continue;
 			}
 			else {
-				column += _columns[j];
+				column += toupper(_columns[j]);
 			}
 		}
 		break;
 	}
 	t.columnsNumber = i;
+}
+
+void TableFunctions::splitColumns(string _columns,const char* _tableName) {
+	int index = searchTable(_tableName),position;
+	if (index != -1) {
+		char* prueba;
+		prueba = new char[_columns.size() + 1];
+		strcpy(prueba, _columns.c_str());
+		ifstream TableRead(md.name, ios::in | ios::binary);
+		if (TableRead) {
+			position = sizeof(metaData) + md.bitmapSize + (index * (md.blockSize + 8)+30);
+			TableRead.seekg(position, ios::cur);
+			TableRead.read(reinterpret_cast<char*>(&t.columnsNumber), 4);
+			char delimeter[] = ",";
+			char* splitColumns = strtok(prueba, delimeter);
+			int i = 0;
+			cout << "\n" << _tableName << "\n\n";
+			while (splitColumns != NULL) {
+				while (i<t.columnsNumber)
+				{
+					TableRead.read(reinterpret_cast<char*>(&t.columns[i]), sizeof(columns));
+					if (strcmp(t.columns[i].name, splitColumns) == 0) {
+						if (t.columns[i].primaryKey)
+							cout << "(PK) ";
+						cout << "\t" << t.columns[i].name << "\t" << char(186);
+						break;
+					}
+					i++;
+				}	
+				splitColumns = strtok(NULL, delimeter);
+				TableRead.seekg((position + 4), ios::beg);
+				i = 0;
+			}
+			cout << "\n\n";
+			TableRead.close();
+			return;
+		}
+	}
+	else {
+		cout << "\nError 404 \nTable not found\n";
+	}
+
 }
 
 bool TableFunctions::writeOnDatabase(int _index, BlocksData _block) {
@@ -89,18 +139,19 @@ void TableFunctions::selectTable(const char* _tableName) {
 	ifstream TableRead(md.name, ios::in | ios::binary);
 	if (TableRead) {
 		int index = 0, position;
-		Tables table;
 
 		while (index < md.NumberBlocks) {
 			position = sizeof(metaData) + md.bitmapSize + (index * (md.blockSize + 8));
 			TableRead.seekg(position, ios::beg);
-			TableRead.read(reinterpret_cast<char*>(&table.name), 30);
-			if (strcmp(table.name, _tableName) == 0) {
-				TableRead.read(reinterpret_cast<char*>(&table.columnsNumber), sizeof(int));
-				cout << "\n" << table.name << "\n\n";
-				for (int i = 0; i < table.columnsNumber; i++) {
-					TableRead.read(reinterpret_cast<char*>(&table.columns[i]), sizeof(columns));
-					cout << "\t" << table.columns[i].name << "\t" << char(186);
+			TableRead.read(reinterpret_cast<char*>(&t.name), 30);
+			if (strcmp(t.name, _tableName) == 0) {
+				TableRead.read(reinterpret_cast<char*>(&t.columnsNumber), sizeof(int));
+				cout << "\n" << t.name << "\n\n";
+				for (int i = 0; i < t.columnsNumber; i++) {
+					TableRead.read(reinterpret_cast<char*>(&t.columns[i]), sizeof(columns));
+					if (t.columns[i].primaryKey)
+						cout << "(PK) ";
+					cout << "\t" << t.columns[i].name << "\t" << char(186);
 				}
 				cout << "\n\n";
 				TableRead.close();
@@ -116,12 +167,11 @@ int TableFunctions::searchTable(const char* _tableName) {
 	ifstream TableRead(md.name, ios::in | ios::binary);
 	if (TableRead) {
 		int index = 0, position;
-		Tables table;
 		while (index < md.NumberBlocks) {
 			position = sizeof(metaData) + md.bitmapSize + (index * (md.blockSize + 8));
 			TableRead.seekg(position, ios::beg);
-			TableRead.read(reinterpret_cast<char*>(&table.name), 30);
-			if (strcmp(table.name, _tableName) == 0) {
+			TableRead.read(reinterpret_cast<char*>(&t.name), 30);
+			if (strcmp(t.name, _tableName) == 0) {
 				return index;
 			}
 			index++;

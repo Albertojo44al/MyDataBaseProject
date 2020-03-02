@@ -5,7 +5,7 @@
 #include "metaData.h"
 #include "Blocks.h"
 #include "bitMap.h"
-#include "string"
+#include <string>
 using namespace std;
 int main() {
 
@@ -158,6 +158,30 @@ int main() {
 			TableFunctions tf(md);
 			tf.selectTable(tableName.c_str());
 
+		}
+
+		else if (strncmp(command.c_str(), "SELECT", 6) == 0) {
+			
+			string columns = "";
+			for (int i = 7; i < command.size(); i++) {
+				if (command[i] == ' ')
+					break;
+				columns += command[i];
+			}
+			cout << "FROM ";
+			string tableName, newTableName="";
+			cin >> tableName;
+			if (tableName[tableName.size() - 1] != ';') {
+				cout << "\ninvalid process\n";
+				continue;
+			}
+
+			for (int i = 0; i < tableName.size() - 1; i++) {
+				newTableName += toupper(tableName[i]);
+			}
+			TableFunctions t(mdF.readMetaData(name));
+			t.splitColumns(columns, newTableName.c_str());
+			
 		}
 
 		else if (strncmp(command.c_str(), "DROP TABLE", 10) == 0) {
