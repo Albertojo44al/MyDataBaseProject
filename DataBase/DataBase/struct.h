@@ -3,6 +3,8 @@
 #include <fstream>
 #include <iostream>
 #include <cmath>
+#include <stdio.h>
+#include <stdlib.h>
 using namespace std;
 
 
@@ -18,16 +20,17 @@ struct metaData {
 
 
 struct columns {
-	char name[30];
-	char dataType[6];
+	char name[29];
+	char dataType[8];
 	int firstDataBlock;
+	int countData;
 	bool primaryKey;
 };
 
 struct Tables {
 	char name[30];
 	int columnsNumber;
-	columns columns[11];
+	columns columns[10];
 };
 
 

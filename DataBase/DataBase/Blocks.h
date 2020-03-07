@@ -11,7 +11,6 @@ class dataBlocks {
 
 public:
 	dataBlocks(metaData);
-	dataBlocks();
 	void save(string);
 	BlocksData readBlock(int);
 	void cleanBlock(int);

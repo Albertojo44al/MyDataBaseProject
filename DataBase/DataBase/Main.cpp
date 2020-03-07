@@ -14,9 +14,9 @@ int main() {
 	string name = "";
 	while (true) {
 
-
 		if (name != "") {
 			cout << "\nSQL " << name << "> ";
+			
 		}
 		else {
 			cout << "\nSQL>";
@@ -115,7 +115,7 @@ int main() {
 
 		}
 
-		else if (strncmp(command.c_str(), "CREATE TABLE", 12) == 0) {
+		else if (strncmp(command.c_str(), "CREATE TABLE", 12) == 0 && name != "") {
 			string tableName = "";
 			for (int i = 13; i < command.size(); i++) {
 				if (command[i] == ' ')
@@ -136,6 +136,8 @@ int main() {
 						cout << "\nTable " << tableName << " created\n";
 					else if (result == -1)
 						cout << "\nTable already exist \n";
+					else if (result == -2)
+						cout << "\nJust one primary key \n";
 					else
 						cout << "\nSyntax error\n";
 					break;
@@ -143,7 +145,49 @@ int main() {
 			}
 		}
 
-		else if (strncmp(command.c_str(), "SELECT * FROM", 13) == 0) {
+		else if (strncmp(command.c_str(), "INSERT INTO", 11) == 0 && name!="") {
+			if (command[command.size() - 1] != ';') {
+				cout << "\ninvalid process\n";
+				continue;
+			}
+			int index=0;
+			string tableName = "", values = "",columns ="";
+			for (int i = 12; i < command.size(); i++) {
+				if (command[i] == '(') {
+					index = i+1;
+					break;
+				}
+				tableName += command[i];
+			}
+			for (int i = index; i < command.size(); i++) {
+				if (command[i] == ' ') {
+					index = i + 1;
+					break;
+				}
+				columns += command[i];
+			}
+
+			if (strncmp(command.substr(index,command.size()).c_str(), "VALUES", 6) == 0){
+				
+				for (int i = index+7; i < command.size(); i++) {
+					if (command[i] == ';')
+						break;
+					values += command[i];
+				}
+				metaData md = mdF.readMetaData(name);
+				TableFunctions tf(md);
+				int result = tf.insertData(tableName.c_str(), columns, values);
+				if (result == 1)
+					cout << "\nAdd data succes";
+				else if (result == -1)
+					cout << "\nError\nTable not found\n";
+				else if (result == -2)
+					cout << "\nError\nColumn not found\n";
+			}
+			
+		}
+
+		else if (strncmp(command.c_str(), "SELECT * FROM", 13) == 0 && name != "") {
 			if (command[command.size() - 1] != ';') {
 				cout << "\ninvalid process\n";
 				continue;
@@ -156,35 +200,39 @@ int main() {
 			}
 			metaData md = mdF.readMetaData(name);
 			TableFunctions tf(md);
-			tf.selectTable(tableName.c_str());
+			tf.selectAllTable(tableName.c_str());
 
 		}
 
-		else if (strncmp(command.c_str(), "SELECT", 6) == 0) {
-			
-			string columns = "";
+		else if (strncmp(command.c_str(), "SELECT", 6) == 0 && name != "") {
+			int index = 0;
+			string columns = "",tableName = "";;
 			for (int i = 7; i < command.size(); i++) {
-				if (command[i] == ' ')
+				if (command[i] == ' ') {
+					index = i + 1;
 					break;
+				}
 				columns += command[i];
 			}
-			cout << "FROM ";
-			string tableName, newTableName="";
-			cin >> tableName;
-			if (tableName[tableName.size() - 1] != ';') {
-				cout << "\ninvalid process\n";
-				continue;
-			}
 
-			for (int i = 0; i < tableName.size() - 1; i++) {
-				newTableName += toupper(tableName[i]);
+			if (strncmp(command.substr(index, command.size()).c_str(), "FROM", 4) == 0) {
+				
+				for (int i = index + 5; i < command.size(); i++) {
+					if (command[i] == ';')
+						break;
+					tableName += command[i];
+				}
+				TableFunctions t(mdF.readMetaData(name));
+				t.selectColumns(columns, tableName.c_str());
 			}
-			TableFunctions t(mdF.readMetaData(name));
-			t.splitColumns(columns, newTableName.c_str());
+			else {
+				cout << "\nSyntax error\n";
+			}
+			
 			
 		}
 
-		else if (strncmp(command.c_str(), "DROP TABLE", 10) == 0) {
+		else if (strncmp(command.c_str(), "DROP TABLE", 10) == 0 && name != "") {
 			if (command[command.size() - 1] != ';') {
 				cout << "\ninvalid process\n";
 				continue;
@@ -224,6 +272,9 @@ int main() {
 		else if (strncmp(command.c_str(), "EXIT", 5) == 0) {
 			exit(1);
 		}
+
+		else
+		cout << "\n Invalid process\n";
 
 	}
 }
