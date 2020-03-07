@@ -187,6 +187,33 @@ int main() {
 			
 		}
 
+		else if (strncmp(command.c_str(), "DELETE FROM", 11) == 0 && name != "") {
+			if (command[command.size() - 1] != ';') {
+				cout << "\ninvalid process\n";
+				continue;
+			}
+			int index = 0;
+			string tableName = "", values="";
+			for (int i = 12; i < command.size(); i++) {
+				if (command[i] == ' ' || command[i] == ';') {
+					index = i + 1;
+					break;
+				}
+				tableName += command[i];
+			}
+			if (strncmp(command.substr(index, command.size()).c_str(), "WHERE", 5) == 0) {
+				for (int i = index + 6; i < command.size(); i++) {
+					if (command[i] == ';')
+						break;
+					values += command[i];
+				}
+			}
+			metaData md = mdF.readMetaData(name);
+			TableFunctions tf(md);
+			
+			tf.dropTable(tableName.c_str(), false);
+		}
+
 		else if (strncmp(command.c_str(), "SELECT * FROM", 13) == 0 && name != "") {
 			if (command[command.size() - 1] != ';') {
 				cout << "\ninvalid process\n";
@@ -243,8 +270,8 @@ int main() {
 					break;
 				tableName += command[i];
 			}
-			TableFunctions t(mdF.readMetaData(name));
-			t.dropTable(tableName.c_str());
+			TableFunctions tf(mdF.readMetaData(name));
+			tf.dropTable(tableName.c_str(),true);
 		}
 
 		else if (strncmp(command.c_str(), "DROP DATABASE", 13) == 0) {

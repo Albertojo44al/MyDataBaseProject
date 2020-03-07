@@ -25,7 +25,7 @@ int TableFunctions::addTable(const char* _name, string _columns) {
 	b = blocksFunctions.readBlock(index);
 
 	b.next = -1;
-	writeOnDatabase(index);
+	writeTableOnDatabase(index);
 
 	bitMap.setOn(index);
 	bitMap.modify(md.name);
@@ -220,7 +220,7 @@ int TableFunctions::searchTable(const char* _tableName) {
 	}
 }
 
-void TableFunctions::dropTable(const char* _tableName) {
+void TableFunctions::dropTable(const char* _tableName,bool _table) {
 	dataBlocks db(md);
 	bitMapFunctions map(md);
 	int position, index;
@@ -231,19 +231,27 @@ void TableFunctions::dropTable(const char* _tableName) {
 	else {
 		ifstream TableRead(md.name, ios::in | ios::binary);
 		if (TableRead) {
-			while (index != -1) {
-				position = sizeof(metaData) + md.bitmapSize + (index * (md.blockSize + 8));
-				TableRead.seekg(position, ios::cur);
-				TableRead.read(reinterpret_cast<char*>(b.blocks), md.blockSize);
-				TableRead.read(reinterpret_cast<char*>(&b.next), 4);
-				map.read(md.name);
-				map.setOff(index);
-				db.cleanBlock(position);
-				index = b.next;
-			}
+			
+			position = sizeof(metaData) + md.bitmapSize + (index * (md.blockSize + 8));
+			TableRead.seekg(position+30, ios::cur);
+			TableRead.read(reinterpret_cast<char*>(&t.columnsNumber), sizeof(int));
+			for (int i = 0; i < t.columnsNumber; i++) {
+				TableRead.read(reinterpret_cast<char*>(&t.columns[i]), sizeof(columns));
+				if(t.columns[i].firstDataBlock!=-1)
+				deleteData(t.columns[i].firstDataBlock);
+				if (!_table) {
+					t.columns[i].firstDataBlock = -1;
+					t.columns[i].countData = 0;
+					modifyColumns(index,i);
+				}
+			}	
 			TableRead.close();
-			map.modify(md.name);
-			cout << "\nTable " << _tableName << " droped\n";
+			if (_table) {
+				deleteData(index);
+				cout << "\nTable " << _tableName << " droped\n";
+			}
+			else
+				cout << "\nDelete complete\n";
 		}
 	}
 }
@@ -392,7 +400,25 @@ double TableFunctions::castDouble(string _value) {
 	return strtod(_value.c_str(),NULL);
 }
 
-void TableFunctions::deleteData(const char* _tablename, const char* _where) {
-
-
+void TableFunctions::deleteData(int _index) {
+	dataBlocks db(md);
+	bitMapFunctions map(md);
+	int position;
+	b.blocks = new char[md.blockSize];
+	
+		ifstream TableRead(md.name, ios::in | ios::binary);
+		if (TableRead) {
+			while (_index != -1) {
+				position = sizeof(metaData) + md.bitmapSize + (_index * (md.blockSize + 8));
+				TableRead.seekg(position, ios::cur);
+				TableRead.read(reinterpret_cast<char*>(b.blocks), md.blockSize);
+				TableRead.read(reinterpret_cast<char*>(&b.next), 4);
+				map.read(md.name);
+				map.setOff(_index);
+				db.cleanBlock(position);
+				_index = b.next;
+			}
+			TableRead.close();
+			map.modify(md.name);
+		}
 }

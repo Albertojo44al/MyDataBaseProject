@@ -15,7 +15,7 @@ public:
 	int addTable(const char*, string);
 	bool writeTableOnDatabase(int);
 	void selectAllTable(const char*);
-	void dropTable(const char*);
+	void dropTable(const char*,bool);
 	int searchTable(const char*);
 	bool writeColumns(string);
 	void selectColumns(string,const char*);
@@ -26,6 +26,6 @@ public:
 	void modifyColumns(int,int);
 	bool writeData(int,string,const char*);
 	void selectData(int,int,const char*);
-	void deleteData(const char*, const char*);
+	void deleteData(int);
 };
 
