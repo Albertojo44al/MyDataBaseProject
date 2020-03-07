@@ -34,7 +34,7 @@ int TableFunctions::addTable(const char* _name, string _columns) {
 
 bool TableFunctions::writeColumns(string _columns) {
 	int i = 0,spaces =0,primaryKey=0;
-	while (i < 11) {
+	while (i < 10) {
 		string column = "";
 		
 		for (int j = 0; j < _columns.size(); j++) {
@@ -74,7 +74,7 @@ bool TableFunctions::writeColumns(string _columns) {
 }
 
 void TableFunctions::selectColumns(string _columns,const char* _tableName) {
-	int index = searchTable(_tableName),position;
+	int index = searchTable(_tableName),position, charLength = 0, space = 0;
 	if (index != -1) {
 		char* prueba;
 		prueba = new char[_columns.size() + 1];
@@ -96,8 +96,32 @@ void TableFunctions::selectColumns(string _columns,const char* _tableName) {
 						if (t.columns[i].primaryKey)
 							cout << "(PK) ";
 						cout << "\t" << t.columns[i].name << "\n\n";
+						dataBlocks blocksFunctions(md);
+						b = blocksFunctions.readBlock(t.columns[i].firstDataBlock);
 						for (int j = 0; j < t.columns[i].countData; j++) {
-							selectData(t.columns[i].firstDataBlock, j, t.columns[i].dataType);
+							charLength = atoi(t.columns[i].dataType);
+							if (charLength > md.blockSize)
+								charLength = md.blockSize;
+
+							if (space >= md.blockSize) {
+
+								while (b.next != -1) {
+									selectData(b.next, 0, t.columns[i].dataType);
+									b = blocksFunctions.readBlock(b.next);
+									if ((charLength + charLength) < md.blockSize)
+										space = 0;
+									break;
+								}
+							}
+							else {
+								selectData(t.columns[i].firstDataBlock, j, t.columns[i].dataType);
+								if (strcmp(t.columns[i].dataType, "INT") == 0)
+									space += sizeof(int);
+								else if (strcmp(t.columns[i].dataType, "DOUBLE") == 0)
+									space += sizeof(double);
+								else
+									space += charLength;
+							}
 						}
 						cout << "\n\n";
 						break;
@@ -144,7 +168,7 @@ bool TableFunctions::writeTableOnDatabase(int _index) {
 }
 
 void TableFunctions::selectAllTable(const char* _tableName) {
-	int index = searchTable(_tableName), position;
+	int index = searchTable(_tableName), position, charLength=0, space =0;
 	if (index != -1) {
 		ifstream TableRead(md.name, ios::in | ios::binary);
 		if (TableRead) {
@@ -158,8 +182,32 @@ void TableFunctions::selectAllTable(const char* _tableName) {
 				if (t.columns[i].primaryKey)
 					cout << "(PK) ";
 				cout << "\t" << t.columns[i].name << "\n" << char(186);
+				dataBlocks blocksFunctions(md);
+				b = blocksFunctions.readBlock(t.columns[i].firstDataBlock);
 				for (int j = 0; j < t.columns[i].countData; j++) {
-					selectData(t.columns[i].firstDataBlock, j, t.columns[i].dataType);
+					charLength = atoi(t.columns[i].dataType);
+					if (charLength > md.blockSize)
+						charLength = md.blockSize; 
+
+					if (space >= md.blockSize) {
+						
+						while (b.next != -1) {
+							selectData(b.next, 0, t.columns[i].dataType);
+							b = blocksFunctions.readBlock(b.next);
+							if((charLength + charLength) < md.blockSize)
+								space = 0;
+							break;
+						}
+					}
+					else {
+						selectData(t.columns[i].firstDataBlock, j, t.columns[i].dataType);
+						if(strcmp(t.columns[i].dataType,"INT")==0)
+							space += sizeof(int);
+						else if (strcmp(t.columns[i].dataType, "DOUBLE") == 0)
+							space += sizeof(double);
+						else
+							space += charLength;
+					}
 				}
 				cout << "\n\n";
 			}
@@ -172,7 +220,6 @@ void TableFunctions::selectAllTable(const char* _tableName) {
 }
 
 void TableFunctions::selectData(int _index,int _number,const char* _dataType) {
-
 	ifstream DataRead(md.name, ios::in | ios::binary);
 	if (DataRead) {
 		int position = sizeof(metaData) + md.bitmapSize + (_index * (md.blockSize + 8));
@@ -193,6 +240,8 @@ void TableFunctions::selectData(int _index,int _number,const char* _dataType) {
 		}
 		else {
 			int length = atoi(_dataType);
+			if (length > md.blockSize)
+				length = md.blockSize;
 			position += (_number * length);
 			DataRead.seekg(position, ios::beg);
 			char* data = new char[length];
@@ -288,19 +337,11 @@ int TableFunctions::insertData(const char* _tablename, string _columns, string _
 						if (strcmp(columName.c_str(), t.columns[columnPosition].name) == 0) {
 							if (t.columns[columnPosition].firstDataBlock != -1) {
 								b = blocksFunctions.readBlock(t.columns[columnPosition].firstDataBlock);
-								while (b.next != -1) {
-									b = blocksFunctions.readBlock(b.next);
-								}
-									if (md.blockSize < (b.actualPosition + castInt(t.columns[columnPosition].dataType)) || md.blockSize < (b.actualPosition+sizeof(double))){
-										map.read(md.name);
-										int freePosition = map.freePosition();
-										writeData(freePosition, valueName, t.columns[columnPosition].dataType);
-										b.next = freePosition;
-										map.setOn(freePosition);
-										map.modify(md.name);
+									if (md.blockSize <= (b.actualPosition + castInt(t.columns[columnPosition].dataType)) || md.blockSize < (b.actualPosition+sizeof(double))){
+										writeData(t.columns[columnPosition].firstDataBlock, valueName, t.columns[columnPosition].dataType,true);
 									}
 									else {
-										writeData(t.columns[columnPosition].firstDataBlock, valueName, t.columns[columnPosition].dataType);
+										writeData(t.columns[columnPosition].firstDataBlock, valueName, t.columns[columnPosition].dataType,false);
 									}
 							}
 							else {
@@ -308,7 +349,7 @@ int TableFunctions::insertData(const char* _tablename, string _columns, string _
 								map.read(md.name);
 								int freePosition = map.freePosition();
 								b = blocksFunctions.readBlock(freePosition);
-								writeData(freePosition, valueName, t.columns[columnPosition].dataType);
+								writeData(freePosition, valueName, t.columns[columnPosition].dataType,false);
 								t.columns[columnPosition].firstDataBlock = freePosition;
 								
 								map.setOn(freePosition);
@@ -337,18 +378,38 @@ int TableFunctions::insertData(const char* _tablename, string _columns, string _
 	return 1;
 }
 
-bool TableFunctions::writeData(int _index, string _value, const char* _dataType) {
+bool TableFunctions::writeData(int _index, string _value, const char* _dataType,bool _otherBlock) {
 	FILE* file;
 	file = fopen(md.name, "r+b");
 	if (file == 0) {
 		return false;
 	}
 	else {
-		int dataInt;
+		int Blockposition, dataInt;
 		double dataDouble;
-		int Blockposition = sizeof(metaData) + md.bitmapSize + (_index * (md.blockSize + 8));
-		fseek(file, Blockposition+b.actualPosition, SEEK_CUR);
+		if (_otherBlock) {
+			dataBlocks blocksFunctions(md);
+			while (b.next != -1) {
+				_index = b.next;
+				b = blocksFunctions.readBlock(b.next);
+			}
+			bitMapFunctions map(md);
+			map.read(md.name);
+			int freePosition = map.freePosition();
+			b.next = freePosition;
+			Blockposition = sizeof(metaData) + md.bitmapSize + (_index * (md.blockSize + 8)) + md.blockSize;
+			fseek(file, Blockposition, SEEK_SET);
+			fwrite(&b.next, sizeof(int), 1, file);
+			fwrite(&b.actualPosition, sizeof(int), 1, file);
+			map.setOn(freePosition);
+			map.modify(md.name);
+			_index = freePosition;
+			b = blocksFunctions.readBlock(_index);
+		}
 		
+		Blockposition = sizeof(metaData) + md.bitmapSize + (_index * (md.blockSize + 8));
+		fseek(file, Blockposition+b.actualPosition, SEEK_SET);
+
 		if (strcmp(_dataType, "INT") == 0) {
 			dataInt = castInt(_value);
 			fwrite(&dataInt, sizeof(int), 1, file);
@@ -360,8 +421,9 @@ bool TableFunctions::writeData(int _index, string _value, const char* _dataType)
 			b.actualPosition += sizeof(double);
 		}
 		else {
-
 			int sizeOfChar = castInt(_dataType);
+			if (sizeOfChar > md.blockSize)
+				sizeOfChar = md.blockSize;
 			char* value = new char[sizeOfChar];
 			strcpy(value, _value.c_str());
 			fwrite(value, sizeOfChar, 1, file);
@@ -410,7 +472,7 @@ void TableFunctions::deleteData(int _index) {
 		if (TableRead) {
 			while (_index != -1) {
 				position = sizeof(metaData) + md.bitmapSize + (_index * (md.blockSize + 8));
-				TableRead.seekg(position, ios::cur);
+				TableRead.seekg(position, ios::beg);
 				TableRead.read(reinterpret_cast<char*>(b.blocks), md.blockSize);
 				TableRead.read(reinterpret_cast<char*>(&b.next), 4);
 				map.read(md.name);

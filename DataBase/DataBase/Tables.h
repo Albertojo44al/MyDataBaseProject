@@ -24,7 +24,7 @@ public:
 	int castInt(string);
 	double castDouble(string);
 	void modifyColumns(int,int);
-	bool writeData(int,string,const char*);
+	bool writeData(int,string,const char*,bool);
 	void selectData(int,int,const char*);
 	void deleteData(int);
 };
