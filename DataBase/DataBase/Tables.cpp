@@ -73,8 +73,9 @@ bool TableFunctions::writeColumns(string _columns) {
 	return true;
 }
 
-void TableFunctions::selectColumns(string _columns,const char* _tableName) {
+void TableFunctions::selectColumns(string _columns,const char* _tableName,string _whereSentence) {
 	int index = searchTable(_tableName),position, charLength = 0, space = 0;
+	int dataPosition = where(index, _whereSentence);
 	if (index != -1) {
 		char* prueba;
 		prueba = new char[_columns.size() + 1];
@@ -119,7 +120,13 @@ void TableFunctions::selectColumns(string _columns,const char* _tableName) {
 								}
 							}
 							else {
-								selectData(t.columns[i].firstDataBlock, j, t.columns[i].dataType);
+								if (dataPosition == -1) {
+									selectData(t.columns[i].firstDataBlock, j, t.columns[i].dataType);
+								}
+								else {
+									selectData(t.columns[i].firstDataBlock, dataPosition, t.columns[i].dataType);
+									break;
+								}
 								if (strcmp(t.columns[i].dataType, "INT") == 0)
 									space += sizeof(int);
 								else if (strcmp(t.columns[i].dataType, "DOUBLE") == 0)
@@ -174,6 +181,7 @@ bool TableFunctions::writeTableOnDatabase(int _index) {
 
 void TableFunctions::selectAllTable(const char* _tableName,string _whereSentence) {
 	int index = searchTable(_tableName), position, charLength=0, space =0;
+	int dataPosition = where(index, _whereSentence);
 	if (index != -1) {
 		ifstream TableRead(md.name, ios::in | ios::binary);
 		if (TableRead) {
@@ -209,7 +217,14 @@ void TableFunctions::selectAllTable(const char* _tableName,string _whereSentence
 						}
 					}
 					else {
+						if (dataPosition == -1) {
 							selectData(t.columns[i].firstDataBlock, j, t.columns[i].dataType);
+						}
+						else {
+							selectData(t.columns[i].firstDataBlock, dataPosition, t.columns[i].dataType);
+							break;
+						}
+							
 						if(strcmp(t.columns[i].dataType,"INT")==0)
 							space += sizeof(int);
 						else if (strcmp(t.columns[i].dataType, "DOUBLE") == 0)
@@ -295,8 +310,10 @@ void TableFunctions::dropTable(const char* _tableName,bool _table, string _where
 			TableRead.read(reinterpret_cast<char*>(&t.columnsNumber), sizeof(int));
 			for (int i = 0; i < t.columnsNumber; i++) {
 				TableRead.read(reinterpret_cast<char*>(&t.columns[i]), sizeof(columns));
-				if(t.columns[i].firstDataBlock!=-1)
-				deleteData(t.columns[i].firstDataBlock);
+				if (t.columns[i].firstDataBlock != -1) {
+
+					deleteData(t.columns[i].firstDataBlock);
+				}
 				if (!_table) {
 					t.columns[i].firstDataBlock = -1;
 					t.columns[i].countData = 0;
@@ -476,7 +493,6 @@ void TableFunctions::deleteData(int _index) {
 	bitMapFunctions map(md);
 	int position;
 	b.blocks = new char[md.blockSize];
-	
 		ifstream TableRead(md.name, ios::in | ios::binary);
 		if (TableRead) {
 			while (_index != -1) {
@@ -493,6 +509,22 @@ void TableFunctions::deleteData(int _index) {
 			map.modify(md.name);
 		}
 }
+
+//int TableFunctions::deleteDataWhere(string _sentence, int _index, const char* _dataType) {
+//	dataBlocks db(md);
+//	b = db.readBlock(_index);
+//	int indexData =where(_index, _sentence);
+//	FILE* file;
+//	file = fopen(md.name, "r+b");
+//	int postion;
+//	while (_index != -1) {
+//
+//		_index = b.next;
+//	}
+//	return 1;
+//		
+//	
+//}
 
 void TableFunctions::modifyData(int _positionBlock, int _positionData,const char* _dataType, string _value) {
 	FILE* file;
@@ -527,7 +559,9 @@ int TableFunctions::updateData(const char* _tableName, string _values, string _w
 	int index = searchTable(_tableName), position,size;
 	string column = "", value = "";
 	int split = 0;
-	int row = whereUpdate(index, _where);
+	int row = where(index, _where);
+	if (row == -1)
+		return -3;
 	for (int i = 0; i < _values.size(); i++) {
 		if (_values[i] == '=')
 			split = 1;
@@ -561,9 +595,10 @@ int TableFunctions::updateData(const char* _tableName, string _values, string _w
 	
 }
 
-int TableFunctions::whereUpdate(int _tableIndex,string _sentence) {
+int TableFunctions::where(int _tableIndex,string _sentence) {
+	dataBlocks db(md);
 	string column = "", value = "";
-	int split = 0;
+	int split = 0, space= 0;
 	for (int i = 0; i < _sentence.size(); i++) {
 		if (_sentence[i] == '=')
 			split = 1;
@@ -582,6 +617,7 @@ int TableFunctions::whereUpdate(int _tableIndex,string _sentence) {
 			DataRead.read(reinterpret_cast<char*>(&t.columns[i]), sizeof(columns));
 			if (strcmp(t.columns[i].name, column.c_str()) == 0) {
 				_tableIndex = t.columns[i].firstDataBlock;
+				b = db.readBlock(_tableIndex);
 				position = sizeof(metaData) + md.bitmapSize + (_tableIndex * (md.blockSize + 8));
 				DataRead.seekg(position, ios::beg);
 				int size;
@@ -598,6 +634,7 @@ int TableFunctions::whereUpdate(int _tableIndex,string _sentence) {
 					size = sizeof(double);
 					double data;
 					for (int j = 0; j < t.columns[i].countData; j++) {
+
 						DataRead.read(reinterpret_cast<char*>(&data), size);
 						if (data == castDouble(value))
 							return j;
@@ -617,6 +654,7 @@ int TableFunctions::whereUpdate(int _tableIndex,string _sentence) {
 				}
 			}
 		}
+
 	}
 	return -1;
 }

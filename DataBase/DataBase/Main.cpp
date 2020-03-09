@@ -224,8 +224,10 @@ int main() {
 					cout << "\nUpdate succes\n";
 				else if (result == -1)
 					cout << "\nError\nTable not found\n";
-				else
+				else if(result ==-2)
 					cout << "\nError\nColumn not found\n";
+				else
+					cout << "\nError\nColumn in where not found\n";
 			}
 			else
 				cout << "\nError\nSyntax error\n";
@@ -280,7 +282,7 @@ int main() {
 					value += command[i];
 				}
 				tf.selectAllTable(tableName.c_str(), value);
-
+				continue;
 			}
 			
 			tf.selectAllTable(tableName.c_str(),"");
@@ -289,7 +291,7 @@ int main() {
 
 		else if (strncmp(command.c_str(), "SELECT", 6) == 0 && name != "") {
 			int index = 0;
-			string columns = "",tableName = "";;
+			string columns = "",tableName = "",value ="";
 			for (int i = 7; i < command.size(); i++) {
 				if (command[i] == ' ') {
 					index = i + 1;
@@ -301,16 +303,29 @@ int main() {
 			if (strncmp(command.substr(index, command.size()).c_str(), "FROM", 4) == 0) {
 				
 				for (int i = index + 5; i < command.size(); i++) {
-					if (command[i] == ';')
+					if (command[i] == ' ' || command[i] == ';') {
+						index = i + 1;
 						break;
+					}
 					tableName += command[i];
 				}
 				TableFunctions t(mdF.readMetaData(name));
-				t.selectColumns(columns, tableName.c_str());
+
+				if (strncmp(command.substr(index, command.size()).c_str(), "WHERE", 5) == 0) {
+					for (int i = index + 6; i < command.size(); i++) {
+						if (command[i] == ';')
+							break;
+						value += command[i];
+					}
+					t.selectColumns(columns, tableName.c_str(), value);
+					continue;
+				}
+				t.selectColumns(columns, tableName.c_str(),"");
 			}
 			else {
 				cout << "\nSyntax error\n";
 			}
+			
 			
 			
 		}

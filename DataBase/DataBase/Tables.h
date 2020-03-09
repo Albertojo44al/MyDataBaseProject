@@ -18,7 +18,7 @@ public:
 	void dropTable(const char*,bool,string);
 	int searchTable(const char*);
 	bool writeColumns(string);
-	void selectColumns(string,const char*);
+	void selectColumns(string,const char*,string);
 	bool readColumns(int);
 	int insertData(const char*, string,string);
 	int castInt(string);
@@ -27,7 +27,8 @@ public:
 	bool writeData(int,string,const char*,bool);
 	void selectData(int,int,const char*);
 	void deleteData(int);
-	int whereUpdate(int,string);
+	int deleteDataWhere(string,int,const char*);
+	int where(int,string);
 	int updateData(const char*, string, string);
 	void modifyData(int,int,const char*,string);
 };
