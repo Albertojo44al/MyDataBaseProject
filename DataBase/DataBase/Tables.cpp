@@ -88,6 +88,7 @@ void TableFunctions::selectColumns(string _columns,const char* _tableName) {
 			char* splitColumns = strtok(prueba, delimeter);
 			int i = 0;
 			cout << "\n" << _tableName << "\n\n";
+			
 			while (splitColumns != NULL) {
 				while (i<t.columnsNumber)
 				{
@@ -95,7 +96,11 @@ void TableFunctions::selectColumns(string _columns,const char* _tableName) {
 					if (strcmp(t.columns[i].name, splitColumns) == 0) {
 						if (t.columns[i].primaryKey)
 							cout << "(PK) ";
-						cout << "\t" << t.columns[i].name << "\n\n";
+						cout << t.columns[i].name << "\n";
+						for (int i = 0; i < 15; i++) {
+							cout << char(205);
+						}
+						cout << "\n\t";
 						dataBlocks blocksFunctions(md);
 						b = blocksFunctions.readBlock(t.columns[i].firstDataBlock);
 						for (int j = 0; j < t.columns[i].countData; j++) {
@@ -167,7 +172,7 @@ bool TableFunctions::writeTableOnDatabase(int _index) {
 	}
 }
 
-void TableFunctions::selectAllTable(const char* _tableName) {
+void TableFunctions::selectAllTable(const char* _tableName,string _whereSentence) {
 	int index = searchTable(_tableName), position, charLength=0, space =0;
 	if (index != -1) {
 		ifstream TableRead(md.name, ios::in | ios::binary);
@@ -181,7 +186,11 @@ void TableFunctions::selectAllTable(const char* _tableName) {
 				TableRead.read(reinterpret_cast<char*>(&t.columns[i]), sizeof(columns));
 				if (t.columns[i].primaryKey)
 					cout << "(PK) ";
-				cout << "\t" << t.columns[i].name << "\n" << char(186);
+				cout << t.columns[i].name << "\n\n";
+				for (int i = 0; i < 15; i++) {
+					cout << char(205);
+				}
+				cout << "\n\t";
 				dataBlocks blocksFunctions(md);
 				b = blocksFunctions.readBlock(t.columns[i].firstDataBlock);
 				for (int j = 0; j < t.columns[i].countData; j++) {
@@ -200,7 +209,7 @@ void TableFunctions::selectAllTable(const char* _tableName) {
 						}
 					}
 					else {
-						selectData(t.columns[i].firstDataBlock, j, t.columns[i].dataType);
+							selectData(t.columns[i].firstDataBlock, j, t.columns[i].dataType);
 						if(strcmp(t.columns[i].dataType,"INT")==0)
 							space += sizeof(int);
 						else if (strcmp(t.columns[i].dataType, "DOUBLE") == 0)
@@ -229,14 +238,14 @@ void TableFunctions::selectData(int _index,int _number,const char* _dataType) {
 			DataRead.seekg(position, ios::beg);
 			int data;
 			DataRead.read(reinterpret_cast<char*>(&data), sizeof(int));
-			cout << data <<"\t" <<char(186);
+			cout << data <<char(186);
 		}
 		else if(strcmp(_dataType, "DOUBLE")==0){
 			position += (_number * sizeof(double));
 			DataRead.seekg(position, ios::beg);
 			double data;
 			DataRead.read(reinterpret_cast<char*>(&data), sizeof(double));
-			cout << data << "\t" << char(186);
+			cout << data << char(186);
 		}
 		else {
 			int length = atoi(_dataType);
@@ -246,7 +255,7 @@ void TableFunctions::selectData(int _index,int _number,const char* _dataType) {
 			DataRead.seekg(position, ios::beg);
 			char* data = new char[length];
 			DataRead.read(reinterpret_cast<char*>(data), length);
-			cout << data << "\t" << char(186);
+			cout << data << char(186);
 		}
 		DataRead.close();
 	}
@@ -269,7 +278,7 @@ int TableFunctions::searchTable(const char* _tableName) {
 	}
 }
 
-void TableFunctions::dropTable(const char* _tableName,bool _table) {
+void TableFunctions::dropTable(const char* _tableName,bool _table, string _whereSentence) {
 	dataBlocks db(md);
 	bitMapFunctions map(md);
 	int position, index;
@@ -483,4 +492,131 @@ void TableFunctions::deleteData(int _index) {
 			TableRead.close();
 			map.modify(md.name);
 		}
+}
+
+void TableFunctions::modifyData(int _positionBlock, int _positionData,const char* _dataType, string _value) {
+	FILE* file;
+	file = fopen(md.name, "r+b");
+	int position;
+	if (strcmp(_dataType, "INT") == 0) {
+		position = _positionBlock + (_positionData * sizeof(int));
+		fseek(file, position, SEEK_CUR);
+		int data = castInt(_value);
+		fwrite(&data, sizeof(int), 1, file);
+	}
+	else if (strcmp(_dataType, "DOUBLE") == 0) {
+		position = _positionBlock + (_positionData * sizeof(double));
+		fseek(file, position, SEEK_CUR);
+		double data = castDouble(_value);
+		fwrite(&data, sizeof(double), 1, file);
+	}
+	else {
+		int sizeOfChar = castInt(_dataType);
+		if (sizeOfChar > md.blockSize)
+			sizeOfChar = md.blockSize;
+		char* value = new char[sizeOfChar];
+		position = _positionBlock + (_positionData * sizeOfChar);
+		fseek(file, position, SEEK_CUR);
+		strcpy(value, _value.c_str());
+		fwrite(value, sizeOfChar, 1, file);
+	}
+	fclose(file);
+}
+
+int TableFunctions::updateData(const char* _tableName, string _values, string _where) {
+	int index = searchTable(_tableName), position,size;
+	string column = "", value = "";
+	int split = 0;
+	int row = whereUpdate(index, _where);
+	for (int i = 0; i < _values.size(); i++) {
+		if (_values[i] == '=')
+			split = 1;
+		else if (split == 0)
+			column += _values[i];
+		else
+			value += _values[i];
+	}
+	
+	if (index != -1) {
+		ifstream DataRead(md.name, ios::in | ios::binary);
+		if (DataRead) {
+			position = sizeof(metaData) + md.bitmapSize + (index * (md.blockSize + 8));
+			DataRead.seekg(position, ios::beg);
+			DataRead.read(reinterpret_cast<char*>(&t.name), 30);
+			DataRead.read(reinterpret_cast<char*>(&t.columnsNumber), sizeof(int));
+			for (int i = 0; i < t.columnsNumber; i++) {
+				DataRead.read(reinterpret_cast<char*>(&t.columns[i]), sizeof(columns));
+				if (strcmp(t.columns[i].name, column.c_str()) == 0){
+					index = t.columns[i].firstDataBlock;
+					position = sizeof(metaData) + md.bitmapSize + (index * (md.blockSize + 8));
+							modifyData(position, row, t.columns[i].dataType, value);
+							return 1;
+				}
+			}
+			return -2;//columna mal escrota
+		}
+	}
+	else 
+		return -1; //Tabla mal escrota
+	
+}
+
+int TableFunctions::whereUpdate(int _tableIndex,string _sentence) {
+	string column = "", value = "";
+	int split = 0;
+	for (int i = 0; i < _sentence.size(); i++) {
+		if (_sentence[i] == '=')
+			split = 1;
+		else if (split == 0)
+			column += _sentence[i];
+		else
+			value += _sentence[i];
+	}
+	if (_tableIndex != -1) {
+		ifstream DataRead(md.name, ios::in | ios::binary);
+		int position = sizeof(metaData) + md.bitmapSize + (_tableIndex * (md.blockSize + 8));
+		DataRead.seekg(position, ios::beg);
+		DataRead.read(reinterpret_cast<char*>(&t.name), 30);
+		DataRead.read(reinterpret_cast<char*>(&t.columnsNumber), sizeof(int));
+		for (int i = 0; i < t.columnsNumber; i++) {
+			DataRead.read(reinterpret_cast<char*>(&t.columns[i]), sizeof(columns));
+			if (strcmp(t.columns[i].name, column.c_str()) == 0) {
+				_tableIndex = t.columns[i].firstDataBlock;
+				position = sizeof(metaData) + md.bitmapSize + (_tableIndex * (md.blockSize + 8));
+				DataRead.seekg(position, ios::beg);
+				int size;
+				if (strcmp(t.columns[i].dataType, "INT") == 0) {
+					size = sizeof(int);
+					int data;
+					for (int j = 0; j < t.columns[i].countData; j++) {
+						DataRead.read(reinterpret_cast<char*>(&data), size);
+						if (data == castInt(value))
+							return j;
+					}
+				}
+				else if (strcmp(t.columns[i].dataType, "DOUBLE") == 0) {
+					size = sizeof(double);
+					double data;
+					for (int j = 0; j < t.columns[i].countData; j++) {
+						DataRead.read(reinterpret_cast<char*>(&data), size);
+						if (data == castDouble(value))
+							return j;
+					}
+					
+				}
+				else {
+					int sizeOfChar = castInt(t.columns[i].dataType);
+					if (sizeOfChar > md.blockSize)
+						sizeOfChar = md.blockSize;
+					char* data = new char[sizeOfChar];
+					for (int j = 0; j < t.columns[i].countData; j++) {
+						DataRead.read(reinterpret_cast<char*>(data), sizeOfChar);
+						if (strcmp(data, value.c_str()) == 0)
+							return j;
+					}
+				}
+			}
+		}
+	}
+	return -1;
 }

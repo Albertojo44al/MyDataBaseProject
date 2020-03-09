@@ -187,6 +187,49 @@ int main() {
 			
 		}
 
+		else if (strncmp(command.c_str(), "UPDATE", 6)==0) {
+		if (command[command.size() - 1] != ';') {
+			cout << "\ninvalid process\n";
+			continue;
+		}
+			int index = 0;
+			string tableName = "", values = "",whereSentence = "";
+			for (int i = 7; i < command.size(); i++) {
+				if (command[i] == ' ') {
+					index = i + 1;
+					break;
+				}
+				tableName += command[i];
+			}
+			if (strncmp(command.substr(index, command.size()).c_str(), "SET", 3) == 0) {
+				index += 4;
+				for (int i = index; i < command.size(); i++) {
+					if (command[i] == ' ') {
+						index = i + 1;
+						break;
+					}
+					values += command[i];
+				}
+			}
+			if (strncmp(command.substr(index, command.size()).c_str(), "WHERE", 5) == 0) {
+				for (int i = index+6; i < command.size(); i++) {
+					if (command[i] == ';')
+						break;
+					whereSentence += command[i];
+				}
+				metaData md = mdF.readMetaData(name);
+				TableFunctions tf(md);
+				int result = tf.updateData(tableName.c_str(), values, whereSentence);
+				if (result == 1)
+					cout << "\nUpdate succes\n";
+				else if (result == -1)
+					cout << "\nError\nTable not found\n";
+				else
+					cout << "\nError\nColumn not found\n";
+			}
+			else
+				cout << "\nError\nSyntax error\n";
+		}
 		else if (strncmp(command.c_str(), "DELETE FROM", 11) == 0 && name != "") {
 			if (command[command.size() - 1] != ';') {
 				cout << "\ninvalid process\n";
@@ -211,7 +254,7 @@ int main() {
 			metaData md = mdF.readMetaData(name);
 			TableFunctions tf(md);
 			
-			tf.dropTable(tableName.c_str(), false);
+			tf.dropTable(tableName.c_str(), false, values);
 		}
 
 		else if (strncmp(command.c_str(), "SELECT * FROM", 13) == 0 && name != "") {
@@ -219,15 +262,28 @@ int main() {
 				cout << "\ninvalid process\n";
 				continue;
 			}
-			string tableName = "";
+			int index = 0;
+			string tableName = "",value ="";
 			for (int i = 14; i < command.size(); i++) {
-				if (command[i] == ' ' || command[i] == ';')
+				if (command[i] == ' ' || command[i] == ';') {
+					index = i +1;
 					break;
+				}
 				tableName += command[i];
 			}
 			metaData md = mdF.readMetaData(name);
 			TableFunctions tf(md);
-			tf.selectAllTable(tableName.c_str());
+			if (strncmp(command.substr(index, command.size()).c_str(), "WHERE", 5) == 0) {
+				for (int i = index + 6; i < command.size(); i++) {
+					if (command[i] == ';')
+						break;
+					value += command[i];
+				}
+				tf.selectAllTable(tableName.c_str(), value);
+
+			}
+			
+			tf.selectAllTable(tableName.c_str(),"");
 
 		}
 
@@ -271,7 +327,7 @@ int main() {
 				tableName += command[i];
 			}
 			TableFunctions tf(mdF.readMetaData(name));
-			tf.dropTable(tableName.c_str(),true);
+			tf.dropTable(tableName.c_str(),true,"");
 		}
 
 		else if (strncmp(command.c_str(), "DROP DATABASE", 13) == 0) {
