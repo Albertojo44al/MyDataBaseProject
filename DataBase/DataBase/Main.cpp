@@ -187,7 +187,7 @@ int main() {
 			
 		}
 
-		else if (strncmp(command.c_str(), "UPDATE", 6)==0) {
+		else if (strncmp(command.c_str(), "UPDATE", 6)==0 && name!="") {
 		if (command[command.size() - 1] != ';') {
 			cout << "\ninvalid process\n";
 			continue;
@@ -232,6 +232,7 @@ int main() {
 			else
 				cout << "\nError\nSyntax error\n";
 		}
+
 		else if (strncmp(command.c_str(), "DELETE FROM", 11) == 0 && name != "") {
 			if (command[command.size() - 1] != ';') {
 				cout << "\ninvalid process\n";

@@ -253,6 +253,7 @@ void TableFunctions::selectData(int _index,int _number,const char* _dataType) {
 			DataRead.seekg(position, ios::beg);
 			int data;
 			DataRead.read(reinterpret_cast<char*>(&data), sizeof(int));
+			if(data!=-1)
 			cout << data <<char(186);
 		}
 		else if(strcmp(_dataType, "DOUBLE")==0){
@@ -260,6 +261,7 @@ void TableFunctions::selectData(int _index,int _number,const char* _dataType) {
 			DataRead.seekg(position, ios::beg);
 			double data;
 			DataRead.read(reinterpret_cast<char*>(&data), sizeof(double));
+			if (data != -1)
 			cout << data << char(186);
 		}
 		else {
@@ -270,6 +272,7 @@ void TableFunctions::selectData(int _index,int _number,const char* _dataType) {
 			DataRead.seekg(position, ios::beg);
 			char* data = new char[length];
 			DataRead.read(reinterpret_cast<char*>(data), length);
+			if (data[0] != -1)
 			cout << data << char(186);
 		}
 		DataRead.close();
@@ -294,11 +297,13 @@ int TableFunctions::searchTable(const char* _tableName) {
 }
 
 void TableFunctions::dropTable(const char* _tableName,bool _table, string _whereSentence) {
+	
 	dataBlocks db(md);
 	bitMapFunctions map(md);
 	int position, index;
 	b.blocks = new char[md.blockSize];
 	index = searchTable(_tableName);
+	int IndexData = where(index,_whereSentence);
 	if (index == -1)
 		cout << "\nError \nTable not found\n";
 	else {
@@ -310,14 +315,23 @@ void TableFunctions::dropTable(const char* _tableName,bool _table, string _where
 			TableRead.read(reinterpret_cast<char*>(&t.columnsNumber), sizeof(int));
 			for (int i = 0; i < t.columnsNumber; i++) {
 				TableRead.read(reinterpret_cast<char*>(&t.columns[i]), sizeof(columns));
-				if (t.columns[i].firstDataBlock != -1) {
-
-					deleteData(t.columns[i].firstDataBlock);
+				if (IndexData != -1) {
+					deleteDataWhere(t.columns[i].firstDataBlock, IndexData, t.columns[i].dataType);
 				}
-				if (!_table) {
-					t.columns[i].firstDataBlock = -1;
-					t.columns[i].countData = 0;
-					modifyColumns(index,i);
+				else if (IndexData == -1 && _whereSentence != "") {
+					cout << "\nColumn doesn't exist\n";
+					return;
+				}
+				else {
+					if (t.columns[i].firstDataBlock != -1) {
+
+						deleteData(t.columns[i].firstDataBlock);
+					}
+					if (!_table) {
+						t.columns[i].firstDataBlock = -1;
+						t.columns[i].countData = 0;
+						modifyColumns(index, i);
+					}
 				}
 			}	
 			TableRead.close();
@@ -510,21 +524,41 @@ void TableFunctions::deleteData(int _index) {
 		}
 }
 
-//int TableFunctions::deleteDataWhere(string _sentence, int _index, const char* _dataType) {
-//	dataBlocks db(md);
-//	b = db.readBlock(_index);
-//	int indexData =where(_index, _sentence);
-//	FILE* file;
-//	file = fopen(md.name, "r+b");
-//	int postion;
-//	while (_index != -1) {
-//
-//		_index = b.next;
-//	}
-//	return 1;
-//		
-//	
-//}
+void TableFunctions::deleteDataWhere(int _index,int _indexData,const char* _dataType) {
+	dataBlocks db(md);
+	int size = 0;
+	int position;
+	b = db.readBlock(_index);
+	FILE* file;
+	file = fopen(md.name, "r+b");
+	if (strcmp(_dataType, "INT") == 0) {
+		size = sizeof(int);
+		int data =-1;
+		position = sizeof(metaData) + md.bitmapSize + (_index * (md.blockSize + 8)) + (_indexData * size);
+		fseek(file, position, SEEK_CUR);
+		fwrite(&data, size, 1, file);
+	}
+	else if (strcmp(_dataType, "DOUBLE") == 0) {
+		size = sizeof(double);
+		double data = -1;
+		position = sizeof(metaData) + md.bitmapSize + (_index * (md.blockSize + 8)) + (_indexData * size);
+		fseek(file, position, SEEK_CUR);
+		fwrite(&data, size, 1, file);
+	}
+	else{
+		size = castInt(_dataType);
+		char * data = new char[size];
+		data[0] = -1;
+		position = sizeof(metaData) + md.bitmapSize + (_index * (md.blockSize + 8)) + (_indexData * size);
+		fseek(file, position, SEEK_CUR);
+		fwrite(data, size, 1, file);
+		
+	}
+	
+	
+	
+	fclose(file);
+}
 
 void TableFunctions::modifyData(int _positionBlock, int _positionData,const char* _dataType, string _value) {
 	FILE* file;
@@ -607,6 +641,8 @@ int TableFunctions::where(int _tableIndex,string _sentence) {
 		else
 			value += _sentence[i];
 	}
+	if (value == "-1")
+		return -1;
 	if (_tableIndex != -1) {
 		ifstream DataRead(md.name, ios::in | ios::binary);
 		int position = sizeof(metaData) + md.bitmapSize + (_tableIndex * (md.blockSize + 8));

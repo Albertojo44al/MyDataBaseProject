@@ -27,9 +27,10 @@ public:
 	bool writeData(int,string,const char*,bool);
 	void selectData(int,int,const char*);
 	void deleteData(int);
-	int deleteDataWhere(string,int,const char*);
+	void deleteDataWhere(int,int,const char*);
 	int where(int,string);
 	int updateData(const char*, string, string);
 	void modifyData(int,int,const char*,string);
+	
 };
 
