@@ -30,7 +30,7 @@ struct columns {
 struct Tables {
 	char name[30];
 	int columnsNumber;
-	columns columns[10];
+	columns* columns;
 };
 
 

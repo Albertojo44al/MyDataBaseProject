@@ -204,7 +204,7 @@ int main() {
 			if (strncmp(command.substr(index, command.size()).c_str(), "SET", 3) == 0) {
 				index += 4;
 				for (int i = index; i < command.size(); i++) {
-					if (command[i] == ' ') {
+					if (command[i] == ' ' || command[i] == ';') {
 						index = i + 1;
 						break;
 					}
@@ -217,20 +217,19 @@ int main() {
 						break;
 					whereSentence += command[i];
 				}
-				metaData md = mdF.readMetaData(name);
-				TableFunctions tf(md);
-				int result = tf.updateData(tableName.c_str(), values, whereSentence);
-				if (result == 1)
-					cout << "\nUpdate succes\n";
-				else if (result == -1)
-					cout << "\nError\nTable not found\n";
-				else if(result ==-2)
-					cout << "\nError\nColumn not found\n";
-				else
-					cout << "\nError\nColumn in where not found\n";
+				
 			}
+			metaData md = mdF.readMetaData(name);
+			TableFunctions tf(md);
+			int result = tf.updateData(tableName.c_str(), values, whereSentence);
+			if (result == 1)
+				cout << "\nUpdate succes\n";
+			else if (result == -1)
+				cout << "\nError\nTable not found\n";
+			else if (result == -2)
+				cout << "\nError\nColumn not found\n";
 			else
-				cout << "\nError\nSyntax error\n";
+				cout << "\nError\nColumn in where not found\n";
 		}
 
 		else if (strncmp(command.c_str(), "DELETE FROM", 11) == 0 && name != "") {
