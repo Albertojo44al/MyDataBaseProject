@@ -3,7 +3,7 @@
 #include "bitMap.h"
 #include "MetaData.h"
 #include "Blocks.h"
-
+#include <windows.h>
 
 class TableFunctions {
 	Tables t;
@@ -31,6 +31,6 @@ public:
 	int where(int,string);
 	int updateData(const char*, string, string);
 	void modifyData(int,int,const char*,string);
-	
+	void gotoxy(int,int);
 };
 

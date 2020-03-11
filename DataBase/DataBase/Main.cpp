@@ -26,7 +26,7 @@ int main() {
 			command[i] = toupper(command[i]);
 		}
 
-		if (strncmp(command.c_str(), "CREATE DATABASE", 15) == 0) { // create database 
+		if (strncmp(command.c_str(), "CREATE DATABASE", 15) == 0 && name == "") { // create database 
 
 			//name of file
 			for (int i = 16; i < command.size(); i++) {
@@ -99,7 +99,7 @@ int main() {
 			name = "";
 		}
 
-		else if (strncmp(command.c_str(), "CONNECT TO", 10) == 0) { //connect database
+		else if (strncmp(command.c_str(), "CONNECT TO", 10) == 0 && name == "") { //connect database
 			for (int i = 11; i < command.size(); i++) {
 				if (command[i] == ' ')
 					break;
@@ -204,8 +204,8 @@ int main() {
 			if (strncmp(command.substr(index, command.size()).c_str(), "SET", 3) == 0) {
 				index += 4;
 				for (int i = index; i < command.size(); i++) {
-					if (command[i] == ' ' || command[i] == ';') {
-						index = i + 1;
+					if (command[i] == ')' || command[i] == ';') {
+						index = i + 2;
 						break;
 					}
 					values += command[i];
@@ -260,6 +260,7 @@ int main() {
 		}
 
 		else if (strncmp(command.c_str(), "SELECT * FROM", 13) == 0 && name != "") {
+		
 			if (command[command.size() - 1] != ';') {
 				cout << "\ninvalid process\n";
 				continue;
@@ -281,10 +282,11 @@ int main() {
 						break;
 					value += command[i];
 				}
+				system("cls");
 				tf.selectAllTable(tableName.c_str(), value);
 				continue;
 			}
-			
+			system("cls");
 			tf.selectAllTable(tableName.c_str(),"");
 
 		}

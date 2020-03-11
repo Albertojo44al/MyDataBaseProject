@@ -1,5 +1,14 @@
 #include "Tables.h"
 
+void TableFunctions::gotoxy(int x, int y) {
+	HANDLE hcon;
+	hcon = GetStdHandle(STD_OUTPUT_HANDLE);
+	COORD dwPos;
+	dwPos.X = x;
+	dwPos.Y = y;
+	SetConsoleCursorPosition(hcon, dwPos);
+}
+
 TableFunctions::TableFunctions(metaData _md) {
 	md = _md;
 	int c = (md.blockSize - 34) / sizeof(columns);
@@ -77,6 +86,7 @@ bool TableFunctions::writeColumns(string _columns) {
 }
 
 void TableFunctions::selectColumns(string _columns,const char* _tableName,string _whereSentence) {
+	system("cls");
 	int index = searchTable(_tableName),position, charLength = 0, space = 0;
 	int dataPosition = where(index, _whereSentence);
 	if (dataPosition == -2) {
@@ -102,16 +112,12 @@ void TableFunctions::selectColumns(string _columns,const char* _tableName,string
 				{
 					TableRead.read(reinterpret_cast<char*>(&t.columns[i]), sizeof(columns));
 					if (strcmp(t.columns[i].name, splitColumns) == 0) {
-						if (t.columns[i].primaryKey)
-							cout << "(PK) ";
+						gotoxy(i * 18, 3);
 						cout << t.columns[i].name << "\n";
-						for (int i = 0; i < 15; i++) {
-							cout << char(205);
-						}
-						cout << "\n\t";
 						dataBlocks blocksFunctions(md);
 						b = blocksFunctions.readBlock(t.columns[i].firstDataBlock);
 						for (int j = 0; j < t.columns[i].countData; j++) {
+							gotoxy(i * 18, j + 4);
 							charLength = atoi(t.columns[i].dataType);
 							if (charLength > md.blockSize)
 								charLength = md.blockSize;
@@ -203,16 +209,13 @@ void TableFunctions::selectAllTable(const char* _tableName,string _whereSentence
 			cout << "\n" << t.name << "\n\n";
 			for (int i = 0; i < t.columnsNumber; i++) {
 				TableRead.read(reinterpret_cast<char*>(&t.columns[i]), sizeof(columns));
-				if (t.columns[i].primaryKey)
-					cout << "(PK) ";
+				gotoxy(i * 18, 3);
 				cout << t.columns[i].name << "\n\n";
-				for (int i = 0; i < 15; i++) {
-					cout << char(205);
-				}
-				cout << "\n\t";
 				dataBlocks blocksFunctions(md);
 				b = blocksFunctions.readBlock(t.columns[i].firstDataBlock);
+
 				for (int j = 0; j < t.columns[i].countData; j++){
+					gotoxy(i * 18, j+4);
 					charLength = atoi(t.columns[i].dataType);
 					if (charLength > md.blockSize)
 						charLength = md.blockSize; 
@@ -267,7 +270,7 @@ void TableFunctions::selectData(int _index,int _number,const char* _dataType) {
 			int data;
 			DataRead.read(reinterpret_cast<char*>(&data), sizeof(int));
 			if(data!=-1)
-			cout << data <<char(186);
+			cout << char(186) << data;
 		}
 		else if(strcmp(_dataType, "DOUBLE")==0){
 			position += (_number * sizeof(double));
@@ -275,7 +278,7 @@ void TableFunctions::selectData(int _index,int _number,const char* _dataType) {
 			double data;
 			DataRead.read(reinterpret_cast<char*>(&data), sizeof(double));
 			if (data != -1)
-			cout << data << char(186);
+			cout << char(186) << data;
 		}
 		else {
 			int length = atoi(_dataType);
@@ -286,7 +289,7 @@ void TableFunctions::selectData(int _index,int _number,const char* _dataType) {
 			char* data = new char[length];
 			DataRead.read(reinterpret_cast<char*>(data), length);
 			if (data[0] != -1)
-			cout << data << char(186);
+			cout << char(186) << data;
 		}
 		DataRead.close();
 	}
@@ -642,7 +645,8 @@ int TableFunctions::updateData(const char* _tableName, string _values, string _w
 						if (space >= md.blockSize) {
 
 							while (b.next != -1) {
-								selectData(b.next, 0, t.columns[i].dataType);
+								int newPosition = sizeof(metaData) + md.bitmapSize + (b.next * (md.blockSize + 8));
+								modifyData(newPosition, 0, t.columns[i].dataType, value);
 								b = blocksFunctions.readBlock(b.next);
 								if ((charLength + charLength) < md.blockSize)
 									space = 0;
