@@ -64,7 +64,6 @@ int bitMapFunctions::nextPosition() {
 	return -1;
 }
 
-
 void bitMapFunctions::setOn(int nBlock) {
 	int positionByte = nBlock / 8;
 	int iniPosition = (nBlock / 8) * 8;

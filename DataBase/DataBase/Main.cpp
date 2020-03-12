@@ -282,11 +282,11 @@ int main() {
 						break;
 					value += command[i];
 				}
-				system("cls");
+				
 				tf.selectAllTable(tableName.c_str(), value);
 				continue;
 			}
-			system("cls");
+			
 			tf.selectAllTable(tableName.c_str(),"");
 
 		}

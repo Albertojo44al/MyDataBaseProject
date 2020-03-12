@@ -86,14 +86,15 @@ bool TableFunctions::writeColumns(string _columns) {
 }
 
 void TableFunctions::selectColumns(string _columns,const char* _tableName,string _whereSentence) {
-	system("cls");
 	int index = searchTable(_tableName),position, charLength = 0, space = 0;
-	int dataPosition = where(index, _whereSentence);
-	if (dataPosition == -2) {
+	vector<int> dataPosition = where(index, _whereSentence);
+	int* cdataPosition = dataPosition.data();
+	if (*cdataPosition == -2) {
 		cout << "Error\n in where sentence\n";
 		return;
 	}
 	if (index != -1) {
+		system("cls");
 		char* prueba;
 		prueba = new char[_columns.size() + 1];
 		strcpy(prueba, _columns.c_str());
@@ -104,25 +105,27 @@ void TableFunctions::selectColumns(string _columns,const char* _tableName,string
 			TableRead.read(reinterpret_cast<char*>(&t.columnsNumber), 4);
 			char delimeter[] = ",";
 			char* splitColumns = strtok(prueba, delimeter);
-			int i = 0;
+			int i = 0, y=0;
 			cout << "\n" << _tableName << "\n\n";
 			
 			while (splitColumns != NULL) {
 				while (i<t.columnsNumber)
 				{
 					TableRead.read(reinterpret_cast<char*>(&t.columns[i]), sizeof(columns));
+					
 					if (strcmp(t.columns[i].name, splitColumns) == 0) {
-						gotoxy(i * 18, 3);
+						
+						gotoxy(y* 18, 3);
 						cout << t.columns[i].name << "\n";
 						dataBlocks blocksFunctions(md);
 						b = blocksFunctions.readBlock(t.columns[i].firstDataBlock);
 						for (int j = 0; j < t.columns[i].countData; j++) {
-							gotoxy(i * 18, j + 4);
+							gotoxy(y * 18, j + 4);	
 							charLength = atoi(t.columns[i].dataType);
 							if (charLength > md.blockSize)
 								charLength = md.blockSize;
 
-							if (space >= md.blockSize) {
+							if ((space + charLength) > md.blockSize || (space + sizeof(double) > md.blockSize)) {
 
 								while (b.next != -1) {
 									selectData(b.next, 0, t.columns[i].dataType);
@@ -133,11 +136,16 @@ void TableFunctions::selectColumns(string _columns,const char* _tableName,string
 								}
 							}
 							else {
-								if (dataPosition == -1) {
+								if (*cdataPosition == -1) {
 									selectData(t.columns[i].firstDataBlock, j, t.columns[i].dataType);
 								}
 								else {
-									selectData(t.columns[i].firstDataBlock, dataPosition, t.columns[i].dataType);
+									for (auto it = dataPosition.begin(); it != dataPosition.end(); it++) {
+										
+										selectData(t.columns[i].firstDataBlock, *it, t.columns[i].dataType);
+										gotoxy(y * 18, j + 4);
+										y++;
+									}
 									break;
 								}
 								if (strcmp(t.columns[i].dataType, "INT") == 0)
@@ -148,7 +156,7 @@ void TableFunctions::selectColumns(string _columns,const char* _tableName,string
 									space += charLength;
 							}
 						}
-						cout << "\n\n";
+						y++;
 						break;
 					}
 					i++;
@@ -194,12 +202,14 @@ bool TableFunctions::writeTableOnDatabase(int _index) {
 
 void TableFunctions::selectAllTable(const char* _tableName,string _whereSentence) {
 	int index = searchTable(_tableName), position, charLength=0, space =0;
-	int dataPosition = where(index, _whereSentence);
-	if (dataPosition == -2) {
+	vector<int> dataPosition = where(index, _whereSentence);
+	int* cdataPosition = dataPosition.data();
+	if (*cdataPosition == -2) {
 		cout << "Error\n in where sentence\n";
 		return;
 	}
 	if (index != -1) {
+		system("cls");
 		ifstream TableRead(md.name, ios::in | ios::binary);
 		if (TableRead) {
 			position = sizeof(metaData) + md.bitmapSize + (index * (md.blockSize + 8));
@@ -213,14 +223,14 @@ void TableFunctions::selectAllTable(const char* _tableName,string _whereSentence
 				cout << t.columns[i].name << "\n\n";
 				dataBlocks blocksFunctions(md);
 				b = blocksFunctions.readBlock(t.columns[i].firstDataBlock);
-
+				space = 0;
 				for (int j = 0; j < t.columns[i].countData; j++){
 					gotoxy(i * 18, j+4);
 					charLength = atoi(t.columns[i].dataType);
 					if (charLength > md.blockSize)
 						charLength = md.blockSize; 
 
-					if (space >= md.blockSize) {
+					if ((space + charLength) > md.blockSize || (space + sizeof(double) > md.blockSize)) {
 						
 						while (b.next != -1) {
 							selectData(b.next, 0, t.columns[i].dataType);
@@ -231,11 +241,15 @@ void TableFunctions::selectAllTable(const char* _tableName,string _whereSentence
 						}
 					}
 					else {
-						if (dataPosition == -1) {
+						if (*cdataPosition == -1) {
 							selectData(t.columns[i].firstDataBlock, j, t.columns[i].dataType);
 						}
 						else {
-							selectData(t.columns[i].firstDataBlock, dataPosition, t.columns[i].dataType);
+							for (auto it = dataPosition.begin(); it != dataPosition.end(); it++) {
+								gotoxy(i * 18, j + 4);
+								selectData(t.columns[i].firstDataBlock, *it, t.columns[i].dataType);
+								j++;
+							}
 							break;
 						}
 							
@@ -319,8 +333,9 @@ void TableFunctions::dropTable(const char* _tableName,bool _table, string _where
 	int position, index;
 	b.blocks = new char[md.blockSize];
 	index = searchTable(_tableName);
-	int IndexData = where(index,_whereSentence);
-	if (IndexData == -2) {
+	vector<int> IndexData = where(index,_whereSentence);
+	int* cIndexData = IndexData.data();
+	if (*cIndexData == -2) {
 		cout << "Error\nIn where sentence\n";
 		return;	
 	}
@@ -335,8 +350,9 @@ void TableFunctions::dropTable(const char* _tableName,bool _table, string _where
 			TableRead.read(reinterpret_cast<char*>(&t.columnsNumber), sizeof(int));
 			for (int i = 0; i < t.columnsNumber; i++) {
 				TableRead.read(reinterpret_cast<char*>(&t.columns[i]), sizeof(columns));
-				if (IndexData != -1 ) {
-					deleteDataWhere(t.columns[i].firstDataBlock, IndexData, t.columns[i].dataType);
+				if (*cIndexData != -1 ) {
+					for (auto it = IndexData.begin(); it != IndexData.end(); it++)
+						deleteDataWhere(t.columns[i].firstDataBlock, *it, t.columns[i].dataType);
 				}
 				else {
 					if (t.columns[i].firstDataBlock != -1) {
@@ -609,8 +625,9 @@ int TableFunctions::updateData(const char* _tableName, string _values, string _w
 	int index = searchTable(_tableName), position,size, charLength = 0, space = 0;;
 	string column = "", value = "";
 	int split = 0;
-	int row = where(index, _where);
-	if (row == -2)
+	vector<int> row = where(index, _where);
+	int* cRow = row.data();
+	if (*cRow == -2)
 		return -3;
 	for (int i = 0; i < _values.size(); i++) {
 		if (_values[i] == '=')
@@ -635,14 +652,15 @@ int TableFunctions::updateData(const char* _tableName, string _values, string _w
 					b = blocksFunctions.readBlock(t.columns[i].firstDataBlock);
 					index = t.columns[i].firstDataBlock;
 					position = sizeof(metaData) + md.bitmapSize + (index * (md.blockSize + 8));
+					space = 0;
 					for (int j = 0; j < t.columns[i].countData; j++) {
 
-
+						
 						charLength = atoi(t.columns[i].dataType);
 						if (charLength > md.blockSize)
 							charLength = md.blockSize;
 
-						if (space >= md.blockSize) {
+						if ((space + charLength) > md.blockSize || (space + sizeof(double) > md.blockSize)){
 
 							while (b.next != -1) {
 								int newPosition = sizeof(metaData) + md.bitmapSize + (b.next * (md.blockSize + 8));
@@ -654,11 +672,13 @@ int TableFunctions::updateData(const char* _tableName, string _values, string _w
 							}
 						}
 						else {
-							if (row == -1) {
+							if (*cRow == -1) {
 								modifyData(position, j, t.columns[i].dataType, value);
 							}
 							else {
-								modifyData(position, row, t.columns[i].dataType, value);
+								for (auto it = row.begin(); it != row.end(); it++) {
+									modifyData(position, *it, t.columns[i].dataType, value);
+								}
 								return 1;//exitoso
 							}
 
@@ -684,7 +704,8 @@ int TableFunctions::updateData(const char* _tableName, string _values, string _w
 	
 }
 
-int TableFunctions::where(int _tableIndex,string _sentence) {
+vector<int> TableFunctions::where(int _tableIndex,string _sentence) {
+	vector<int>results;
 	dataBlocks db(md);
 	string column = "", value = "";
 	int split = 0, space= 0;
@@ -700,8 +721,10 @@ int TableFunctions::where(int _tableIndex,string _sentence) {
 		else
 			value += _sentence[i];
 	}
-	if (value == "-1" || value == "" || column == "" || value == "" && column == "")
-		return -1;
+	if (value == "-1" || value == "" || column == "" || value == "" && column == "") {
+		results.push_back(-1);
+		return results;
+	}
 	if (_tableIndex != -1) {
 		ifstream DataRead(md.name, ios::in | ios::binary);
 		int position = sizeof(metaData) + md.bitmapSize + (_tableIndex * (md.blockSize + 8));
@@ -721,13 +744,14 @@ int TableFunctions::where(int _tableIndex,string _sentence) {
 					int data;
 					for (int j = 0; j < t.columns[i].countData; j++) {
 						DataRead.read(reinterpret_cast<char*>(&data), size);
-						if (data == castInt(value) && split ==1)
-							return j;
+						if (data == castInt(value) && split == 1)
+							results.push_back(j);
 						if (data > castInt(value) && split == 2)
-							return j;
+							results.push_back(j);
 						if (data < castInt(value) && split == 3)
-							return j;
+							results.push_back(j);
 					}
+					return results;
 				}
 				else if (strcmp(t.columns[i].dataType, "DOUBLE") == 0) {
 					size = sizeof(double);
@@ -736,13 +760,13 @@ int TableFunctions::where(int _tableIndex,string _sentence) {
 
 						DataRead.read(reinterpret_cast<char*>(&data), size);
 						if (data == castDouble(value) && split==1)
-							return j;
+							results.push_back(j);
 						if (data > castDouble(value) && split == 2)
-							return j;
+							results.push_back(j);
 						if (data < castDouble(value) && split == 3)
-							return j;
+							results.push_back(j);
 					}
-					
+					return results;
 				}
 				else {
 					size = castInt(t.columns[i].dataType);
@@ -752,17 +776,19 @@ int TableFunctions::where(int _tableIndex,string _sentence) {
 					for (int j = 0; j < t.columns[i].countData; j++) {
 						DataRead.read(reinterpret_cast<char*>(data), size);
 						if (strcmp(data, value.c_str()) == 0 && split==1)
-							return j;
+							results.push_back(j);
 						if (strcmp(data, value.c_str()) > 0 && split == 2)
-							return j;
+							results.push_back(j);
 						if (strcmp(data, value.c_str()) < 0 && split == 3)
-							return j;
+							results.push_back(j);
 						
 					}
+					return results;
 				}
 			}
 		}
 	
 	}
-	return -2;
+	results.push_back(-2);
+	return results;
 }

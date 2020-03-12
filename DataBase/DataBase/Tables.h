@@ -4,6 +4,7 @@
 #include "MetaData.h"
 #include "Blocks.h"
 #include <windows.h>
+#include <vector> 
 
 class TableFunctions {
 	Tables t;
@@ -28,7 +29,7 @@ public:
 	void selectData(int,int,const char*);
 	void deleteData(int);
 	void deleteDataWhere(int,int,const char*);
-	int where(int,string);
+	vector<int> where(int,string);
 	int updateData(const char*, string, string);
 	void modifyData(int,int,const char*,string);
 	void gotoxy(int,int);
